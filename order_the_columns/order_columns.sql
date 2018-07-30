@@ -37,13 +37,18 @@ DECLARE
    v_c2_record C2%ROWTYPE;
    v_tab_order number := 1;
    v_sql varchar2(1000) := '';
+   v_sql_crt_tmp_tbl varchar2(1000 char) :='';  -- 创建迁移表
+   v_sql_move_out    varchar2(1000 char) :='';  -- 迁出数据
+   v_sql_move_back   varchar2(1000 char) :='';  -- 迁回数据
+
    v_tmp_table_name VARCHAR2(1000) := NULL;
    v_tmp_pk_name VARCHAR2(1000) := null ;
    v_tmp_pk_columns VARCHAR2(1000)  := NULL;
    v_tmp_pk_conditions VARCHAR2(1000)  := NULL;
    v_columns_update VARCHAR2(1000) := NULL;
    v_regular_columns VARCHAR2(1000) := 'SOURCE_CODE,DATA_ORG_CODE,CREATE_DATE,CREATOR,LAST_UPDATE_DATE,UPDATE_BY,DELETE_FLAG,PROCESS_STATUS';
-
+   b_debug boolean := FALSE; 
+   
 BEGIN
 
   FOR r_c1 IN C1
@@ -59,108 +64,135 @@ BEGIN
       
       -- 创建迁移表
       v_tmp_table_name := r_c1.owner || '.TMP_' || substr(r_c1.table_name, 6);
-      v_sql := 'create table ' || v_tmp_table_name || ' as select * from '  || r_c1.owner || '.' || r_c1.table_name  || ' where 1 > 2'; 
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      v_sql_crt_tmp_tbl := 'create table ' || v_tmp_table_name || ' as select * from '  || r_c1.owner || '.' || r_c1.table_name  || ' where 1 > 2'; 
+      DBMS_OUTPUT.put_line(v_sql_crt_tmp_tbl || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql_crt_tmp_tbl; END IF;
       
       
       -- 迁出规则字段与主键数据
-      
-      v_sql := 'insert into ' || v_tmp_table_name || '(' || v_columns_update
+      v_sql_move_out := 'insert into ' || v_tmp_table_name || '(' || v_columns_update
               || ') SELECT ' ||v_columns_update 
               || ' FROM ' || v_tmp_table_name;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line(v_sql_move_out || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql_move_out ;  END IF;
+      
       
       -- 删除后8位
+      DBMS_OUTPUT.put_line('-- 删除后8位字段');
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column SOURCE_CODE';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column DATA_ORG_CODE';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column CREATE_DATE';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column CREATOR';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column LAST_UPDATE_DATE';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column UPDATE_BY';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column DELETE_FLAG';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' drop column PROCESS_STATUS';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
       
       
       -- 增加字段(假设已经加上了需要加的字段，当删除8个规则字段后，需要加的字段自然已经在最末尾了， 所以指需要把删除的8个再追加回来即可）
-
-      v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  SOURCE_CODE VARCHAR2(30 CHAR) ';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line('-- 增加后8位字段');
+      v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  SOURCE_CODE VARCHAR2(30 CHAR) DEFAULT ''' || substr(r_c1.owner, 5, 10) || '''';
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  DATA_ORG_CODE VARCHAR2(50 CHAR)';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  CREATE_DATE DATE';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  CREATOR VARCHAR2(50 CHAR)';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  LAST_UPDATE_DATE DATE';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  UPDATE_BY VARCHAR2(50 CHAR)';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;  
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  DELETE_FLAG CHAR(1 CHAR)';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql; 
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'alter table ' || r_c1.owner || '.' || r_c1.table_name || ' add  PROCESS_STATUS VARCHAR2(4 CHAR)';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
 
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'SOURCE_CODE IS '  ||  chr(39) || '源系统代码' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'DATA_ORG_CODE IS '  ||  chr(39) || '数据来源' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'CREATE_DATE IS '  ||  chr(39) || '创建日期' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'CREATOR IS '  ||  chr(39) || '创建记录的用户或进程' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'LAST_UPDATE_DATE IS '  ||  chr(39) || '最后更新日期' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'UPDATE_BY IS '  ||  chr(39) || '最近更新的用户或进程' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'DELETE_FLAG IS '  ||  chr(39) || '删除标志1是0否' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       v_sql := 'COMMENT ON COLUMN ' || r_c1.owner || '.' ||  r_c1.table_name  || '.'  ||  'PROCESS_STATUS IS '  ||  chr(39) || 'LANDING 到 共享库的同步状态' || chr(39) ;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN  EXECUTE IMMEDIATE v_sql;  END IF;
+      
       
       -- 更新数据
-      v_sql := 'UPDATE ' || r_c1.owner || '.' || r_c1.table_name || ' d SET ( ' || v_regular_columns || ' ) '
+      DBMS_OUTPUT.put_line('-- 迁回数据');
+      v_sql_move_back := 'UPDATE ' || r_c1.owner || '.' || r_c1.table_name || ' d SET ( ' || v_regular_columns || ' ) '
               || ' = ( SELECT ' || v_regular_columns || ' FROM ' || v_tmp_table_name || ' t WHERE ' ||  v_tmp_pk_conditions || ')';
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql_move_back || ';');
+      IF B_DEBUG THEN   EXECUTE IMMEDIATE v_sql_move_back;  END IF;
 
       -- 删除迁移表
+      DBMS_OUTPUT.put_line('-- 删除临时表');
       v_sql := 'DROP TABLE ' || v_tmp_table_name;
-      DBMS_OUTPUT.put_line(v_sql);
-      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.put_line(v_sql || ';');
+      IF B_DEBUG THEN   EXECUTE IMMEDIATE v_sql;  END IF;
+      dbms
       
       commit;
       
